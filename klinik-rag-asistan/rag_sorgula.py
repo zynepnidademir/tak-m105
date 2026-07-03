@@ -4,7 +4,7 @@ import httpx
 import chromadb
 from google import genai
 from google.genai import types
-from google.genai.errors import ClientError
+from google.genai.errors import ClientError, ServerError
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
 if not API_KEY:
@@ -40,8 +40,8 @@ def _yeniden_denemeli_cagri(fonksiyon, max_deneme=6):
     for deneme in range(max_deneme):
         try:
             return fonksiyon()
-        except ClientError as e:
-            if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e):
+        except (ClientError, ServerError) as e:
+            if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e) or "UNAVAILABLE" in str(e) or "503" in str(e):
                 time.sleep(bekleme)
                 bekleme = min(bekleme * 2, 30)
             else:
