@@ -1,7 +1,10 @@
 import os
+import time
+import httpx
 import chromadb
 from google import genai
 from google.genai import types
+from google.genai.errors import ClientError
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
 if not API_KEY:
@@ -24,19 +27,40 @@ KURALLAR:
 - Cevabinin sonunda mutlaka hangi ilactan ve hangi sayfadan bilgi aldigini belirt.
 - Ilac etkilesimi sorularinda, riski acikca belirt (dusuk/orta/yuksek gibi bir
   degerlendirme dokumanda varsa onu kullan; yoksa sadece dokumandaki ifadeyi aktar).
-- Tibbi tavsiye degil, dokuman ozeti sun; nihai karar hekime aittir ifadesini
-  cevabinin sonuna ekle.
+- Tibbi tavsiye degil, dokuman ozeti sundugunu unutma; nihai karar hekime aittir.
+- Cevabinin en sonuna, ayri bir satirda, sadece su ifadeyi ekle: "Bu bilgi
+  dokuman ozetidir, tibbi tavsiye degildir; nihai karar hekime aittir."
 - Turkce ve acik, anlasilir bir dille cevap ver.
 """
 
 
+def _yeniden_denemeli_cagri(fonksiyon, max_deneme=6):
+    """Rate limit veya baglanti hatasinda bekleyip tekrar dener."""
+    bekleme = 3
+    for deneme in range(max_deneme):
+        try:
+            return fonksiyon()
+        except ClientError as e:
+            if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e):
+                time.sleep(bekleme)
+                bekleme = min(bekleme * 2, 30)
+            else:
+                raise
+        except (httpx.ConnectError, httpx.ReadTimeout, httpx.ConnectTimeout):
+            time.sleep(bekleme)
+            bekleme = min(bekleme * 2, 30)
+    raise RuntimeError("Baglanti veya kota sorunu devam ediyor, lutfen internetinizi kontrol edin.")
+
+
 def embed_sorgu(metin):
-    sonuc = client_genai.models.embed_content(
-        model=EMBEDDING_MODEL,
-        contents=metin,
-        config=types.EmbedContentConfig(task_type="RETRIEVAL_QUERY"),
-    )
-    return sonuc.embeddings[0].values
+    def cagri():
+        sonuc = client_genai.models.embed_content(
+            model=EMBEDDING_MODEL,
+            contents=metin,
+            config=types.EmbedContentConfig(task_type="RETRIEVAL_QUERY"),
+        )
+        return sonuc.embeddings[0].values
+    return _yeniden_denemeli_cagri(cagri)
 
 
 def ilgili_chunklari_bul(soru, n_results=5):
@@ -78,11 +102,14 @@ SORU: {soru}
 
 CEVAP:"""
 
-    sonuc = client_genai.models.generate_content(
-        model=LLM_MODEL,
-        contents=prompt,
-    )
-    return sonuc.text
+    def cagri():
+        sonuc = client_genai.models.generate_content(
+            model=LLM_MODEL,
+            contents=prompt,
+        )
+        return sonuc.text
+
+    return _yeniden_denemeli_cagri(cagri)
 
 
 def sorgula(soru):
