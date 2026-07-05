@@ -59,6 +59,7 @@ Sprint board update: Sprint board görünümü ve kart durumları için: <img wi
 Ürün Durumu: Sprint 1 sonunda ChromaDB kurulumu, veri toplama, chunking, ChromaDB + Gemini embedding entegrasyonu, Gemini LLM ile retrieval, Streamlit arayüzü ve hata dayanıklılığı (retry mekanizması) tamamlanmıştır. 
 Sprint Review:
 Alınan kararlar: Uçtan uca çalışan bir RAG sistemi (ChromaDB + Gemini + Streamlit) başarıyla oluşturulmuştur. Sistemin hata dayanıklılığı (retry mekanizması) ve prompt tutarlılığı iyileştirilmiştir. Ekstra olarak konuşma hafızası ve soru sınıflandırma (router) özelliklerinin eklenmesine karar verilmiştir. Sprint Review katılımcıları: Rümeysa Akkora,Sümeyye Ağır,Sefa Bulut
+
 Sprint Retrospective:
 
 Ekip içi görev dağılımının branch/PR workflow'una geçilerek daha net hale getirilmesi kararı alınmıştır
