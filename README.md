@@ -52,7 +52,7 @@ Sprint 1
 
 
 Backlog düzeni ve Story seçimleri: Backlog, ilk sprintte tamamlanması hedeflenen çekirdek RAG altyapısına göre önceliklendirilmiştir. Story'ler; veri hazırlama, ChromaDB entegrasyonu, LLM entegrasyonu ve arayüz geliştirme olmak üzere görev (task) bazında bölünmüştür. Görevler Trello board üzerinde Backlog, Sprint 1 - To Do, In Progress ve Done listeleri altında takip edilmektedir.
-Daily Scrum: Daily Scrum toplantı notları Trello board üzerindeki "Daily Notes" listesinde, her gün için açılan kart üzerinden ekip üyelerinin yorumlarıyla tutulmaktadır.
+Daily Scrum: Daily Scrum toplantıları whatsapp üzerinden gerçekleştirilmiştir.Günlük notlar ortak word dosyasında tutulmuştur.https://istanbulstunv-my.sharepoint.com/:w:/g/personal/sumeyye_agir_istun_edu_tr/IQBfnHyNTka2QqJG93As4EGYARcI0udwbVqhLLohXYJFLSs?e=n2VJF5.
 Sprint board update: Sprint board görünümü ve kart durumları için: <img width="1277" height="578" alt="image" src="https://github.com/user-attachments/assets/2fb3aaa6-5d55-4bba-82e1-4a34612fb5e8" />
 
 
@@ -63,4 +63,4 @@ Sprint Retrospective:
 
 Ekip içi görev dağılımının branch/PR workflow'una geçilerek daha net hale getirilmesi kararı alınmıştır
 Ortak dosyalar (rag_sorgula.py) üzerinde çalışırken çakışmaları önlemek için herkesin ayrı feature branch açması gerektiği belirlenmiştir
-Prompt ve test senaryoları için ayrılan efor bir sonraki sprintte arttırılmalıdır
+Prompt ve test senaryoları için ayrılan efor bir sonraki sprintte arttırılmalıdır.
