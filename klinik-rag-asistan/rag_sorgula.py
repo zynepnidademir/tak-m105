@@ -12,7 +12,8 @@ if not API_KEY:
 
 client_genai = genai.Client(api_key=API_KEY)
 
-client = chromadb.PersistentClient(path="chroma_db")
+_BU_DOSYANIN_KLASORU = os.path.dirname(os.path.abspath(__file__))
+client = chromadb.PersistentClient(path=os.path.join(_BU_DOSYANIN_KLASORU, "chroma_db"))
 koleksiyon = client.get_collection("ilac_kub_koleksiyonu")
 
 EMBEDDING_MODEL = "models/gemini-embedding-001"
@@ -101,6 +102,7 @@ def ilgili_chunklari_bul(soru, n_results=5):
         chunklar.append({
             "metin": sonuclar["documents"][0][i],
             "ilac": sonuclar["metadatas"][0][i]["ilac"],
+	    "dosya": sonuclar["metadatas"][0][i]["dosya"],
             "ilk_sayfa": sonuclar["metadatas"][0][i]["ilk_sayfa"],
             "son_sayfa": sonuclar["metadatas"][0][i]["son_sayfa"],
         })
@@ -153,6 +155,101 @@ def sorgula(soru):
 
     print(f"\n[CEVAP]\n{cevap}")
     return cevap
+
+import json
+import re
+
+
+def _ilac_dosya_haritasi():
+    return {
+        "Varfarin (Warfmadin 5mg)": "Warfmadin 5mg KÜB",
+        "Ibuprofen (Artril 600mg)": "Artril 600mg KÜB",
+        "Glimepirid (Amaryl 2mg)": "Amaryl 2mg KÜB",
+        "Metformin (Atamet 1000mg)": "Atamet 1000mg KÜB",
+    }
+
+
+def analiz_uret(soru):
+    """
+    Gercek retrieval + LLM kullanarak, dashboard arayuzunun bekledigi
+    yapilandirilmis (JSON) klinik rapor formatinda cevap uretir.
+    Referanslar LLM'e degil, dogrudan retrieval sonucuna dayanir.
+    """
+    chunklar = ilgili_chunklari_bul(soru, n_results=5)
+    baglam = baglam_olustur(chunklar)
+
+    analiz_promptu = f"""{SISTEM_PROMPTU}
+
+DOKUMANLAR:
+{baglam}
+
+SORU: {soru}
+
+Yukaridaki dokumanlara dayanarak, asagidaki JSON formatinda BIR CEVAP ver.
+Baska hicbir metin ekleme, sadece gecerli JSON dondur:
+
+{{
+  "risk": "high" veya "moderate" veya "low" veya "unknown",
+  "risk_label": "kisa risk etiketi (orn. 'Ciddi Risk / Kanama Artisi')",
+  "title": "raporun kisa basligi",
+  "summary": ["madde 1", "madde 2", "madde 3"],
+  "mechanism": "etkilesim mekanizmasinin kisa aciklamasi",
+  "recommendation": "hekime yonelik oneri metni"
+}}
+
+Eger dokumanlarda yeterli bilgi yoksa risk alanini "unknown" yap ve
+diger alanlarda "Yeterli klinik veri bulunamadi" ifadesini kullan.
+"""
+
+    def cagri():
+        sonuc = client_genai.models.generate_content(
+            model=LLM_MODEL,
+            contents=analiz_promptu,
+        )
+        return sonuc.text
+
+    ham_cevap = _yeniden_denemeli_cagri(cagri)
+
+    # Ilk { ile son } arasindaki her seyi al - kod bloklarindan bagimsiz calisir
+    ilk_parantez = ham_cevap.find("{")
+    son_parantez = ham_cevap.rfind("}")
+
+    if ilk_parantez != -1 and son_parantez != -1:
+        temiz = ham_cevap[ilk_parantez:son_parantez + 1]
+    else:
+        temiz = ham_cevap.strip()
+
+    try:
+        rapor = json.loads(temiz)
+
+    except json.JSONDecodeError:
+        rapor = {
+            "risk": "unknown",
+            "risk_label": "Analiz Hatasi",
+            "title": f"'{soru}' Sorgusu",
+            "summary": ["Cevap yapilandirilamadi, ham cevap:", ham_cevap[:500]],
+            "mechanism": "",
+            "recommendation": "",
+        }
+
+    dosya_haritasi = _ilac_dosya_haritasi()
+    referanslar = []
+    for c in chunklar:
+        referanslar.append({
+            "doc_name": dosya_haritasi.get(c["ilac"], c["ilac"]),
+            "chapter_page": f"Sayfa {c['ilk_sayfa']}-{c['son_sayfa']}",
+            "snippet": c["metin"][:220].strip() + "...",
+            "doc_id": c["dosya"].replace(".txt", "").upper(),
+        })
+    
+     # LLM bazen summary'yi liste yerine tek string dondurebilir, garanti altina alalim
+    if isinstance(rapor.get("summary"), str):
+        rapor["summary"] = [rapor["summary"]]
+    elif not isinstance(rapor.get("summary"), list):
+        rapor["summary"] = [str(rapor.get("summary", ""))]
+
+    rapor["references"] = referanslar
+    return rapor
 
 
 if __name__ == "__main__":
