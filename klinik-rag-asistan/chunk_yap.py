@@ -5,8 +5,8 @@ import json
 KAYNAK_KLASOR = "data/ilaclar_metin"
 HEDEF_DOSYA = "data/chunks.json"
 
-CHUNK_SIZE = 1000
-OVERLAP = 200
+CHUNK_SIZE = 1200
+OVERLAP = 250
 
 ILAC_ADLARI = {
     "atamet": "Metformin (Atamet 1000mg)",
