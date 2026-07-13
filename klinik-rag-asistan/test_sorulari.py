@@ -60,6 +60,12 @@ TEST_SORULARI = [
     "Parasetamol ile amoksisilin birlikte kullanilabilir mi?",
     # 6. Belirsiz/genel soru (sistemin hasta baglami olmadan ne yaptigini gormek)
     "Bu hastaya hangi ilaci verebilirim?",
+    # 7. Ilac-gida etkilesimi (dokuman disi ama klinik olarak onemli bir konu)
+    "Warfarin kullanirken K vitamini icerigi yuksek sebzeler (orn. ispanak) tuketmenin bir sakincasi var mi?",
+    # 8. Ozel populasyon / kontrendikasyon (gebelik)
+    "Glimepirid gebelikte kullanilabilir mi?",
+    # 9. Doz ayarlamasi + bobrek fonksiyonu kombinasyonu
+    "Bobrek yetmezligi olan bir hastada ibuprofen (Artril) dozunun ayarlanmasi gerekir mi?",
 ]
 
 
@@ -130,6 +136,47 @@ VAKA_TESTLERI = [
         "beklenen": (
             "Sistem kaynak yetersizligini acikca belirtmeli, kesin bir yargi "
             "uydurmamali ('kaynak yetersiz, hekim degerlendirmesi onerilir')."
+        ),
+    },
+    {
+        "ad": "Vaka 7 - Gebelikte Kontrendike Ilac",
+        "epikriz": (
+            "28 yasinda gebe hasta (24. gebelik haftasi), tip 2 diyabet "
+            "tanisiyla glimepirid 2 mg/gun baslanmasi planlaniyor. Baska "
+            "ek hastalik veya ilac kullanimi yok."
+        ),
+        "soru": "Planlanan tedavi gebelik acisindan uygun mu?",
+        "beklenen": (
+            "Sulfonilure grubu (glimepirid) gebelikte onerilmez, insulin "
+            "tercih edilmeli -> yuksek onem dereceli kontrendikasyon uyarisi."
+        ),
+    },
+    {
+        "ad": "Vaka 8 - Yasli Hasta + Bobrek Fonksiyonu + NSAID",
+        "epikriz": (
+            "81 yasinda erkek hasta, kronik bobrek hastaligi evre 3 "
+            "(eGFR 38) mevcut. Osteoartrit agrisi nedeniyle ibuprofen "
+            "(Artril) 600 mg gunde 3 kez baslanmasi planlaniyor."
+        ),
+        "soru": "Bu doz ve ilac secimi hastanin bobrek fonksiyonuna uygun mu?",
+        "beklenen": (
+            "NSAID nefrotoksisite riski + dusuk eGFR -> doz azaltma veya "
+            "alternatif analjezik onerisi ile orta-yuksek risk uyarisi."
+        ),
+    },
+    {
+        "ad": "Vaka 9 - Uclu Ilac Kombinasyonu (halusinasyon testi)",
+        "epikriz": (
+            "60 yasinda kadin hasta; tip 2 diyabet nedeniyle glimepirid ve "
+            "metformin (Atamet) kullanmakta. Yeni gelisen atriyal "
+            "fibrilasyon nedeniyle tedaviye varfarin eklenmesi planlaniyor."
+        ),
+        "soru": "Bu uc ilacin birlikte kullanimi guvenli mi, ozel bir etkilesim var mi?",
+        "beklenen": (
+            "Sistem yalnizca kaynaklarda yer alan ikili etkilesimleri "
+            "(varsa) belirtmeli; uclu kombinasyona dair dogrudan veri "
+            "yoksa bunu acikca ifade etmeli, uydurma bir etkilesim "
+            "iddia etmemeli."
         ),
     },
 ]
