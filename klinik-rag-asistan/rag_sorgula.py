@@ -91,7 +91,70 @@ def embed_sorgu(metin):
     return _yeniden_denemeli_cagri(cagri)
 
 
+# Veri setimizdeki ilaclarin anahtar kelimeleri -> ChromaDB'deki "ilac" metadata degeri
+_ILAC_ANAHTAR_KELIMELERI = {
+    "Varfarin (Warfmadin 5mg)": ["warfarin", "warfmadin", "kumadin"],
+    "Ibuprofen (Artril 600mg)": ["ibuprofen", "artril"],
+    "Glimepirid (Amaryl 2mg)": ["glimepirid", "amaryl"],
+    "Metformin (Atamet 1000mg)": ["metformin", "atamet"],
+}
+
+
+def _soruda_gecen_ilaclar(soru):
+    """Soru metninde veri setimizdeki hangi ilaclarin gectigini tespit eder."""
+    soru_lower = soru.lower()
+    bulunanlar = []
+    for ilac_adi, anahtarlar in _ILAC_ANAHTAR_KELIMELERI.items():
+        if any(anahtar in soru_lower for anahtar in anahtarlar):
+            bulunanlar.append(ilac_adi)
+    return bulunanlar
+
+
+def _ilac_bazli_chunk_bul(soru, ilac_listesi, ilac_basina_sonuc=4):
+    """Birden fazla ilac tespit edildiginde, her ilac icin ayri ayri
+    retrieval yapip sonuclari birlestirir. Boylece hicbir ilac
+    diger(ler)inin golgesinde kalip kaybolmaz."""
+    soru_embedding = embed_sorgu(soru)
+
+    tum_chunklar = []
+    for ilac_adi in ilac_listesi:
+        sonuclar = koleksiyon.query(
+            query_embeddings=[soru_embedding],
+            n_results=ilac_basina_sonuc,
+            where={"ilac": ilac_adi},
+        )
+        for i in range(len(sonuclar["ids"][0])):
+            tum_chunklar.append({
+                "metin": sonuclar["documents"][0][i],
+                "ilac": sonuclar["metadatas"][0][i]["ilac"],
+                "dosya": sonuclar["metadatas"][0][i]["dosya"],
+                "ilk_sayfa": sonuclar["metadatas"][0][i]["ilk_sayfa"],
+                "son_sayfa": sonuclar["metadatas"][0][i]["son_sayfa"],
+            })
+    return tum_chunklar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def ilgili_chunklari_bul(soru, n_results=5):
+
+    # Router: soruda birden fazla ilac geciyorsa, her ilac icin ayri
+    # retrieval yaparak hicbirinin gozden kacmamasini garanti altina al
+    ilaclar = _soruda_gecen_ilaclar(soru)
+    if len(ilaclar) >= 2:
+        return _ilac_bazli_chunk_bul(soru, ilaclar)
+    
     soru_embedding = embed_sorgu(soru)
     sonuclar = koleksiyon.query(
         query_embeddings=[soru_embedding],
