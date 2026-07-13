@@ -2,6 +2,7 @@ import os
 import time
 import httpx
 import chromadb
+import hashlib
 from google import genai
 from google.genai import types
 from google.genai.errors import ClientError, ServerError
@@ -168,6 +169,36 @@ def _ilac_dosya_haritasi():
         "Metformin (Atamet 1000mg)": "Atamet 1000mg KÜB",
     }
 
+def _cache_anahtari(soru):
+    return hashlib.md5(soru.strip().lower().encode("utf-8")).hexdigest()
+
+
+def _cache_klasoru():
+    bu_klasor = os.path.dirname(os.path.abspath(__file__))
+    klasor = os.path.join(bu_klasor, "cache")
+    os.makedirs(klasor, exist_ok=True)
+    return klasor
+
+
+def _cacheden_oku(soru):
+    yol = os.path.join(_cache_klasoru(), _cache_anahtari(soru) + ".json")
+    if os.path.exists(yol):
+        with open(yol, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return None
+
+
+def _cachee_yaz(soru, rapor):
+    yol = os.path.join(_cache_klasoru(), _cache_anahtari(soru) + ".json")
+    with open(yol, "w", encoding="utf-8") as f:
+        json.dump(rapor, f, ensure_ascii=False, indent=2)
+
+
+
+
+
+
+
 
 def analiz_uret(soru):
     """
@@ -175,6 +206,11 @@ def analiz_uret(soru):
     yapilandirilmis (JSON) klinik rapor formatinda cevap uretir.
     Referanslar LLM'e degil, dogrudan retrieval sonucuna dayanir.
     """
+
+    onbellek = _cacheden_oku(soru)
+    if onbellek is not None:
+        return onbellek
+    
     chunklar = ilgili_chunklari_bul(soru, n_results=5)
     baglam = baglam_olustur(chunklar)
 
@@ -249,6 +285,8 @@ diger alanlarda "Yeterli klinik veri bulunamadi" ifadesini kullan.
         rapor["summary"] = [str(rapor.get("summary", ""))]
 
     rapor["references"] = referanslar
+
+    _cachee_yaz(soru, rapor)
     return rapor
 
 
