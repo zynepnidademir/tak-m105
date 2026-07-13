@@ -18,7 +18,7 @@ client = chromadb.PersistentClient(path=os.path.join(_BU_DOSYANIN_KLASORU, "chro
 koleksiyon = client.get_collection("ilac_kub_koleksiyonu")
 
 EMBEDDING_MODEL = "models/gemini-embedding-001"
-LLM_MODEL = "gemini-2.5-flash"
+LLM_MODEL = "gemini-3.5-flash"
 
 SISTEM_PROMPTU = """Sen, hekimlere yönelik bir Klinik Karar Destek Sistemi'nde çalışan bir klinik asistansın.
 Yalnizca sana asagida DOKUMANLAR bolumunde verilen KUB (Kisa Urun Bilgisi) belgelerindeki
@@ -62,22 +62,29 @@ KURALLAR:
 """
 
 
-def _yeniden_denemeli_cagri(fonksiyon, max_deneme=6):
+def _yeniden_denemeli_cagri(fonksiyon, max_deneme=8):
     """Rate limit veya baglanti hatasinda bekleyip tekrar dener."""
     bekleme = 3
+    son_hata = None
     for deneme in range(max_deneme):
         try:
             return fonksiyon()
         except (ClientError, ServerError) as e:
+            son_hata = e
             if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e) or "UNAVAILABLE" in str(e) or "503" in str(e):
+                print(f"[RETRY {deneme+1}/{max_deneme}] {type(e).__name__}: {e}")
                 time.sleep(bekleme)
-                bekleme = min(bekleme * 2, 30)
+                bekleme = min(bekleme * 2, 60)
             else:
                 raise
-        except (httpx.ConnectError, httpx.ReadTimeout, httpx.ConnectTimeout):
+        except (httpx.ConnectError, httpx.ReadTimeout, httpx.ConnectTimeout) as e:
+            son_hata = e
+            print(f"[RETRY {deneme+1}/{max_deneme}] {type(e).__name__}: {e}")
             time.sleep(bekleme)
-            bekleme = min(bekleme * 2, 30)
-    raise RuntimeError("Baglanti veya kota sorunu devam ediyor, lutfen internetinizi kontrol edin.")
+            bekleme = min(bekleme * 2, 60)
+    raise RuntimeError(
+        f"Baglanti veya kota sorunu devam ediyor. Son hata: {type(son_hata).__name__}: {son_hata}"
+    )
 
 
 def embed_sorgu(metin):
