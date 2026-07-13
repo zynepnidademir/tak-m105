@@ -63,6 +63,28 @@ TEST_SORULARI = [
 ]
 
 
+def router_regresyon_testi():
+    """Coklu ilac router mantiginin dogru calistigini dogrular."""
+    from rag_sorgula import ilgili_chunklari_bul
+
+    print(f"\n{'#'*70}")
+    print("# ROUTER REGRESYON TESTI")
+    print(f"{'#'*70}\n")
+
+    coklu_ilac_sorulari = [
+        ("Metformin ve glimepirid birlikte kullanilabilir mi?", 2),
+        ("Warfarin kullanan bir hastaya ibuprofen verilirse ne olur?", 2),
+        ("Ibuprofen icin gunluk maksimum doz nedir?", 1),
+    ]
+
+    for soru, beklenen_ilac_sayisi in coklu_ilac_sorulari:
+        chunklar = ilgili_chunklari_bul(soru)
+        benzersiz_ilac = len(set(c["ilac"] for c in chunklar))
+        durum = "BASARILI" if benzersiz_ilac >= beklenen_ilac_sayisi else "BASARISIZ"
+        print(f"[{durum}] '{soru}' -> {benzersiz_ilac} ilac bulundu (beklenen: {beklenen_ilac_sayisi})")
+
+
+
 # ---------------------------------------------------------------------------
 # SEVIYE 2 - Epikriz Tabanli Vaka Testleri (uctan uca agent pipeline)
 # ---------------------------------------------------------------------------
@@ -172,3 +194,4 @@ def tum_testleri_calistir():
 
 if __name__ == "__main__":
     tum_testleri_calistir()
+    router_regresyon_testi()
