@@ -75,6 +75,15 @@ def router_regresyon_testi():
         ("Metformin ve glimepirid birlikte kullanilabilir mi?", 2),
         ("Warfarin kullanan bir hastaya ibuprofen verilirse ne olur?", 2),
         ("Ibuprofen icin gunluk maksimum doz nedir?", 1),
+	
+	("Metformin ve glimepirid birlikte kullanilabilir mi?", 2),
+        ("Warfarin kullanan bir hastaya ibuprofen verilirse ne olur?", 2),
+        ("Ibuprofen icin gunluk maksimum doz nedir?", 1),
+        ("Warfarin, ibuprofen ve metformin ayni anda kullanilirsa ne olur?", 3),
+
+
+
+
     ]
 
     for soru, beklenen_ilac_sayisi in coklu_ilac_sorulari:
@@ -165,7 +174,7 @@ def seviye_1_calistir():
         print(f"\n\n{'#' * 70}")
         print(f"# TEST {i}/{len(TEST_SORULARI)}")
         print(f"# Soru: {soru}")
-        print("#" * 70)
+        print("#" * 70)h
         sorgula(soru)
         input("\n[Devam etmek icin Enter'a basin...]")
 

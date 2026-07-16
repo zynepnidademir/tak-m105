@@ -1,3 +1,4 @@
+import concurrent.futures
 import os
 import time
 import httpx
@@ -62,12 +63,22 @@ KURALLAR:
 """
 
 
-def _yeniden_denemeli_cagri(fonksiyon, max_deneme=6):
-    """Rate limit veya baglanti hatasinda bekleyip tekrar dener."""
+
+def _yeniden_denemeli_cagri(fonksiyon, max_deneme=8, zaman_asimi=30):
+    """Rate limit veya baglanti hatasinda bekleyip tekrar dener.
+    Ayrica her denemeyi zaman_asimi saniye ile sinirlar."""
+
     bekleme = 3
     for deneme in range(max_deneme):
         try:
-            return fonksiyon()
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(fonksiyon)
+                return future.result(timeout=zaman_asimi)
+        except concurrent.futures.TimeoutError:
+            son_hata = TimeoutError(f"Istek {zaman_asimi} saniyeyi asti.")
+            print(f"[TIMEOUT {deneme+1}/{max_deneme}] {zaman_asimi} saniyede yanit alinamadi.")
+            time.sleep(bekleme)
+            bekleme = min(bekleme * 2, 60)
         except (ClientError, ServerError) as e:
             if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e) or "UNAVAILABLE" in str(e) or "503" in str(e):
                 time.sleep(bekleme)
@@ -78,7 +89,6 @@ def _yeniden_denemeli_cagri(fonksiyon, max_deneme=6):
             time.sleep(bekleme)
             bekleme = min(bekleme * 2, 30)
     raise RuntimeError("Baglanti veya kota sorunu devam ediyor, lutfen internetinizi kontrol edin.")
-
 
 def embed_sorgu(metin):
     def cagri():
