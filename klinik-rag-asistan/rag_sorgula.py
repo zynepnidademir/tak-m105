@@ -253,19 +253,32 @@ def _cache_klasoru():
     return klasor
 
 
+CACHE_GECERLILIK_SANIYE = 7 * 24 * 60 * 60  # 7 gun
+
+
 def _cacheden_oku(soru):
     yol = os.path.join(_cache_klasoru(), _cache_anahtari(soru) + ".json")
-    if os.path.exists(yol):
-        with open(yol, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return None
+    if not os.path.exists(yol):
+        return None
 
+    with open(yol, "r", encoding="utf-8") as f:
+        kayit = json.load(f)
+
+    kayit_zamani = kayit.get("_cache_zamani", 0)
+    if time.time() - kayit_zamani > CACHE_GECERLILIK_SANIYE:
+        # Suresi dolmus, cache gecersiz say
+        os.remove(yol)
+        return None
+
+    rapor = {k: v for k, v in kayit.items() if k != "_cache_zamani"}
+    return rapor
 
 def _cachee_yaz(soru, rapor):
     yol = os.path.join(_cache_klasoru(), _cache_anahtari(soru) + ".json")
+    kayit = dict(rapor)
+    kayit["_cache_zamani"] = time.time()
     with open(yol, "w", encoding="utf-8") as f:
-        json.dump(rapor, f, ensure_ascii=False, indent=2)
-
+        json.dump(kayit, f, ensure_ascii=False, indent=2)
 
 
 
