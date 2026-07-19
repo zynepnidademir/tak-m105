@@ -69,6 +69,7 @@ def _yeniden_denemeli_cagri(fonksiyon, max_deneme=8, zaman_asimi=30):
     Ayrica her denemeyi zaman_asimi saniye ile sinirlar."""
 
     bekleme = 3
+    son_hata = None
     for deneme in range(max_deneme):
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
@@ -80,15 +81,21 @@ def _yeniden_denemeli_cagri(fonksiyon, max_deneme=8, zaman_asimi=30):
             time.sleep(bekleme)
             bekleme = min(bekleme * 2, 60)
         except (ClientError, ServerError) as e:
+            son_hata = e
             if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e) or "UNAVAILABLE" in str(e) or "503" in str(e):
+                print(f"[RETRY {deneme+1}/{max_deneme}] {type(e).__name__}: {e}")
                 time.sleep(bekleme)
-                bekleme = min(bekleme * 2, 30)
+                bekleme = min(bekleme * 2, 60)
             else:
                 raise
-        except (httpx.ConnectError, httpx.ReadTimeout, httpx.ConnectTimeout):
+        except (httpx.ConnectError, httpx.ReadTimeout, httpx.ConnectTimeout) as e:
+            son_hata = e
+            print(f"[RETRY {deneme+1}/{max_deneme}] {type(e).__name__}: {e}")
             time.sleep(bekleme)
-            bekleme = min(bekleme * 2, 30)
-    raise RuntimeError("Baglanti veya kota sorunu devam ediyor, lutfen internetinizi kontrol edin.")
+            bekleme = min(bekleme * 2, 60)
+    raise RuntimeError(
+        f"Baglanti veya kota sorunu devam ediyor. Son hata: {type(son_hata).__name__}: {son_hata}"
+    )
 
 def embed_sorgu(metin):
     def cagri():
@@ -240,6 +247,11 @@ def _ilac_dosya_haritasi():
         "Ibuprofen (Artril 600mg)": "Artril 600mg KÜB",
         "Glimepirid (Amaryl 2mg)": "Amaryl 2mg KÜB",
         "Metformin (Atamet 1000mg)": "Atamet 1000mg KÜB",
+        "DELIX PLUS (5mg/25mg)":"DELIX PLUS 5mg/25mg KÜB",
+        "PLAVIX (75mg)":"PLAVIX 75mg KÜB",
+        "LIPITOR (20mg)":"LIPITOR 20mg KÜB",
+        "NORVASC (5mg)":"NORVASC 5mg KÜB",
+        "BELOC ZOK (50mg)":"BELOC ZOK 50mg KÜB"
     }
 
 def _cache_anahtari(soru):
