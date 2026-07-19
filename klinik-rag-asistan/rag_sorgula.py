@@ -2,6 +2,7 @@ import os
 import time
 import httpx
 import chromadb
+import hashlib
 from google import genai
 from google.genai import types
 from google.genai.errors import ClientError, ServerError
@@ -61,22 +62,29 @@ KURALLAR:
 """
 
 
-def _yeniden_denemeli_cagri(fonksiyon, max_deneme=6):
+def _yeniden_denemeli_cagri(fonksiyon, max_deneme=8):
     """Rate limit veya baglanti hatasinda bekleyip tekrar dener."""
     bekleme = 3
+    son_hata = None
     for deneme in range(max_deneme):
         try:
             return fonksiyon()
         except (ClientError, ServerError) as e:
+            son_hata = e
             if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e) or "UNAVAILABLE" in str(e) or "503" in str(e):
+                print(f"[RETRY {deneme+1}/{max_deneme}] {type(e).__name__}: {e}")
                 time.sleep(bekleme)
-                bekleme = min(bekleme * 2, 30)
+                bekleme = min(bekleme * 2, 60)
             else:
                 raise
-        except (httpx.ConnectError, httpx.ReadTimeout, httpx.ConnectTimeout):
+        except (httpx.ConnectError, httpx.ReadTimeout, httpx.ConnectTimeout) as e:
+            son_hata = e
+            print(f"[RETRY {deneme+1}/{max_deneme}] {type(e).__name__}: {e}")
             time.sleep(bekleme)
-            bekleme = min(bekleme * 2, 30)
-    raise RuntimeError("Baglanti veya kota sorunu devam ediyor, lutfen internetinizi kontrol edin.")
+            bekleme = min(bekleme * 2, 60)
+    raise RuntimeError(
+        f"Baglanti veya kota sorunu devam ediyor. Son hata: {type(son_hata).__name__}: {son_hata}"
+    )
 
 
 def embed_sorgu(metin):
@@ -90,7 +98,70 @@ def embed_sorgu(metin):
     return _yeniden_denemeli_cagri(cagri)
 
 
+# Veri setimizdeki ilaclarin anahtar kelimeleri -> ChromaDB'deki "ilac" metadata degeri
+_ILAC_ANAHTAR_KELIMELERI = {
+    "Varfarin (Warfmadin 5mg)": ["warfarin", "warfmadin", "kumadin"],
+    "Ibuprofen (Artril 600mg)": ["ibuprofen", "artril"],
+    "Glimepirid (Amaryl 2mg)": ["glimepirid", "amaryl"],
+    "Metformin (Atamet 1000mg)": ["metformin", "atamet"],
+}
+
+
+def _soruda_gecen_ilaclar(soru):
+    """Soru metninde veri setimizdeki hangi ilaclarin gectigini tespit eder."""
+    soru_lower = soru.lower()
+    bulunanlar = []
+    for ilac_adi, anahtarlar in _ILAC_ANAHTAR_KELIMELERI.items():
+        if any(anahtar in soru_lower for anahtar in anahtarlar):
+            bulunanlar.append(ilac_adi)
+    return bulunanlar
+
+
+def _ilac_bazli_chunk_bul(soru, ilac_listesi, ilac_basina_sonuc=4):
+    """Birden fazla ilac tespit edildiginde, her ilac icin ayri ayri
+    retrieval yapip sonuclari birlestirir. Boylece hicbir ilac
+    diger(ler)inin golgesinde kalip kaybolmaz."""
+    soru_embedding = embed_sorgu(soru)
+
+    tum_chunklar = []
+    for ilac_adi in ilac_listesi:
+        sonuclar = koleksiyon.query(
+            query_embeddings=[soru_embedding],
+            n_results=ilac_basina_sonuc,
+            where={"ilac": ilac_adi},
+        )
+        for i in range(len(sonuclar["ids"][0])):
+            tum_chunklar.append({
+                "metin": sonuclar["documents"][0][i],
+                "ilac": sonuclar["metadatas"][0][i]["ilac"],
+                "dosya": sonuclar["metadatas"][0][i]["dosya"],
+                "ilk_sayfa": sonuclar["metadatas"][0][i]["ilk_sayfa"],
+                "son_sayfa": sonuclar["metadatas"][0][i]["son_sayfa"],
+            })
+    return tum_chunklar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def ilgili_chunklari_bul(soru, n_results=5):
+
+    # Router: soruda birden fazla ilac geciyorsa, her ilac icin ayri
+    # retrieval yaparak hicbirinin gozden kacmamasini garanti altina al
+    ilaclar = _soruda_gecen_ilaclar(soru)
+    if len(ilaclar) >= 2:
+        return _ilac_bazli_chunk_bul(soru, ilaclar)
+    
     soru_embedding = embed_sorgu(soru)
     sonuclar = koleksiyon.query(
         query_embeddings=[soru_embedding],
@@ -173,6 +244,36 @@ def _ilac_dosya_haritasi():
         "BELOC ZOK (50mg)":"BELOC ZOK 50mg KÜB"
     }
 
+def _cache_anahtari(soru):
+    return hashlib.md5(soru.strip().lower().encode("utf-8")).hexdigest()
+
+
+def _cache_klasoru():
+    bu_klasor = os.path.dirname(os.path.abspath(__file__))
+    klasor = os.path.join(bu_klasor, "cache")
+    os.makedirs(klasor, exist_ok=True)
+    return klasor
+
+
+def _cacheden_oku(soru):
+    yol = os.path.join(_cache_klasoru(), _cache_anahtari(soru) + ".json")
+    if os.path.exists(yol):
+        with open(yol, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return None
+
+
+def _cachee_yaz(soru, rapor):
+    yol = os.path.join(_cache_klasoru(), _cache_anahtari(soru) + ".json")
+    with open(yol, "w", encoding="utf-8") as f:
+        json.dump(rapor, f, ensure_ascii=False, indent=2)
+
+
+
+
+
+
+
 
 def analiz_uret(soru):
     """
@@ -180,6 +281,11 @@ def analiz_uret(soru):
     yapilandirilmis (JSON) klinik rapor formatinda cevap uretir.
     Referanslar LLM'e degil, dogrudan retrieval sonucuna dayanir.
     """
+
+    onbellek = _cacheden_oku(soru)
+    if onbellek is not None:
+        return onbellek
+    
     chunklar = ilgili_chunklari_bul(soru, n_results=5)
     baglam = baglam_olustur(chunklar)
 
@@ -254,6 +360,8 @@ diger alanlarda "Yeterli klinik veri bulunamadi" ifadesini kullan.
         rapor["summary"] = [str(rapor.get("summary", ""))]
 
     rapor["references"] = referanslar
+
+    _cachee_yaz(soru, rapor)
     return rapor
 
 

@@ -68,7 +68,35 @@ TEST_SORULARI = [
     "Delix Plus kullanan bir hastaya agri kesici olarak Ibuprofen verilirse bobreklerde ne gibi sorunlar olusabilir?",
     # 10. Kontrendikasyon (Gebelik)
     "Hamile bir hastaya Delix Plus veya Warfmadin recete edilebilir mi?"
+    # 7. Ilac-gida etkilesimi (dokuman disi ama klinik olarak onemli bir konu)
+    "Warfarin kullanirken K vitamini icerigi yuksek sebzeler (orn. ispanak) tuketmenin bir sakincasi var mi?",
+    # 8. Ozel populasyon / kontrendikasyon (gebelik)
+    "Glimepirid gebelikte kullanilabilir mi?",
+    # 9. Doz ayarlamasi + bobrek fonksiyonu kombinasyonu
+    "Bobrek yetmezligi olan bir hastada ibuprofen (Artril) dozunun ayarlanmasi gerekir mi?",
 ]
+
+
+def router_regresyon_testi():
+    """Coklu ilac router mantiginin dogru calistigini dogrular."""
+    from rag_sorgula import ilgili_chunklari_bul
+
+    print(f"\n{'#'*70}")
+    print("# ROUTER REGRESYON TESTI")
+    print(f"{'#'*70}\n")
+
+    coklu_ilac_sorulari = [
+        ("Metformin ve glimepirid birlikte kullanilabilir mi?", 2),
+        ("Warfarin kullanan bir hastaya ibuprofen verilirse ne olur?", 2),
+        ("Ibuprofen icin gunluk maksimum doz nedir?", 1),
+    ]
+
+    for soru, beklenen_ilac_sayisi in coklu_ilac_sorulari:
+        chunklar = ilgili_chunklari_bul(soru)
+        benzersiz_ilac = len(set(c["ilac"] for c in chunklar))
+        durum = "BASARILI" if benzersiz_ilac >= beklenen_ilac_sayisi else "BASARISIZ"
+        print(f"[{durum}] '{soru}' -> {benzersiz_ilac} ilac bulundu (beklenen: {beklenen_ilac_sayisi})")
+
 
 
 # ---------------------------------------------------------------------------
@@ -179,6 +207,46 @@ VAKA_TESTLERI = [
         "soru": "Norvasc ve Beloc ZOK birlikte kullanildiginda hemodinamik acikdan neye dikkat edilmelidir?",
         "beklenen": "Kalsiyum kanal blokoru + Beta bloker cakismasi -> Kalp hizi ve tansiyon uzerinde aditif etki, bradikardi/hipotansiyon riski.",
     }
+        "ad": "Vaka 7 - Gebelikte Kontrendike Ilac",
+        "epikriz": (
+            "28 yasinda gebe hasta (24. gebelik haftasi), tip 2 diyabet "
+            "tanisiyla glimepirid 2 mg/gun baslanmasi planlaniyor. Baska "
+            "ek hastalik veya ilac kullanimi yok."
+        ),
+        "soru": "Planlanan tedavi gebelik acisindan uygun mu?",
+        "beklenen": (
+            "Sulfonilure grubu (glimepirid) gebelikte onerilmez, insulin "
+            "tercih edilmeli -> yuksek onem dereceli kontrendikasyon uyarisi."
+        ),
+    },
+    {
+        "ad": "Vaka 8 - Yasli Hasta + Bobrek Fonksiyonu + NSAID",
+        "epikriz": (
+            "81 yasinda erkek hasta, kronik bobrek hastaligi evre 3 "
+            "(eGFR 38) mevcut. Osteoartrit agrisi nedeniyle ibuprofen "
+            "(Artril) 600 mg gunde 3 kez baslanmasi planlaniyor."
+        ),
+        "soru": "Bu doz ve ilac secimi hastanin bobrek fonksiyonuna uygun mu?",
+        "beklenen": (
+            "NSAID nefrotoksisite riski + dusuk eGFR -> doz azaltma veya "
+            "alternatif analjezik onerisi ile orta-yuksek risk uyarisi."
+        ),
+    },
+    {
+        "ad": "Vaka 9 - Uclu Ilac Kombinasyonu (halusinasyon testi)",
+        "epikriz": (
+            "60 yasinda kadin hasta; tip 2 diyabet nedeniyle glimepirid ve "
+            "metformin (Atamet) kullanmakta. Yeni gelisen atriyal "
+            "fibrilasyon nedeniyle tedaviye varfarin eklenmesi planlaniyor."
+        ),
+        "soru": "Bu uc ilacin birlikte kullanimi guvenli mi, ozel bir etkilesim var mi?",
+        "beklenen": (
+            "Sistem yalnizca kaynaklarda yer alan ikili etkilesimleri "
+            "(varsa) belirtmeli; uclu kombinasyona dair dogrudan veri "
+            "yoksa bunu acikca ifade etmeli, uydurma bir etkilesim "
+            "iddia etmemeli."
+        ),
+    },
 ]
 
 
@@ -219,3 +287,4 @@ def tum_testleri_calistir():
 
 if __name__ == "__main__":
     tum_testleri_calistir()
+    router_regresyon_testi()
