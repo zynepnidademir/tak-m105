@@ -17,7 +17,7 @@ client = chromadb.PersistentClient(path=os.path.join(_BU_DOSYANIN_KLASORU, "chro
 koleksiyon = client.get_collection("ilac_kub_koleksiyonu")
 
 EMBEDDING_MODEL = "models/gemini-embedding-001"
-LLM_MODEL = "gemini-2.5-flash"
+LLM_MODEL = "gemini-3.5-flash"
 
 SISTEM_PROMPTU = """Sen, hekimlere yönelik bir Klinik Karar Destek Sistemi'nde çalışan bir klinik asistansın.
 Yalnizca sana asagida DOKUMANLAR bolumunde verilen KUB (Kisa Urun Bilgisi) belgelerindeki
@@ -166,6 +166,11 @@ def _ilac_dosya_haritasi():
         "Ibuprofen (Artril 600mg)": "Artril 600mg KÜB",
         "Glimepirid (Amaryl 2mg)": "Amaryl 2mg KÜB",
         "Metformin (Atamet 1000mg)": "Atamet 1000mg KÜB",
+        "DELIX PLUS (5mg/25mg)":"DELIX PLUS 5mg/25mg KÜB",
+        "PLAVIX (75mg)":"PLAVIX 75mg KÜB",
+        "LIPITOR (20mg)":"LIPITOR 20mg KÜB",
+        "NORVASC (5mg)":"NORVASC 5mg KÜB",
+        "BELOC ZOK (50mg)":"BELOC ZOK 50mg KÜB"
     }
 
 

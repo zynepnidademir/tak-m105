@@ -60,6 +60,14 @@ TEST_SORULARI = [
     "Parasetamol ile amoksisilin birlikte kullanilabilir mi?",
     # 6. Belirsiz/genel soru (sistemin hasta baglami olmadan ne yaptigini gormek)
     "Bu hastaya hangi ilaci verebilirim?",
+    # 7. Kardiyoloji ve Diyabet etkilesimi
+    "Beloc ZOK kullanan bir diyabet hastasinda Atamet (Metformin) kullanimi hipoglisemi belirtilerini etkiler mi?",
+    # 8. Kardiyoloji - Coklu ilac (Kanama riski)
+    "Plavix (Klopidogrel) ve Warfmadin (Varfarin) birlikte kullanildiginda kanama riski artar mi?",
+    # 9. Kardiyoloji - Diuretik ve NSAII etkilesimi
+    "Delix Plus kullanan bir hastaya agri kesici olarak Ibuprofen verilirse bobreklerde ne gibi sorunlar olusabilir?",
+    # 10. Kontrendikasyon (Gebelik)
+    "Hamile bir hastaya Delix Plus veya Warfmadin recete edilebilir mi?"
 ]
 
 
@@ -132,6 +140,45 @@ VAKA_TESTLERI = [
             "uydurmamali ('kaynak yetersiz, hekim degerlendirmesi onerilir')."
         ),
     },
+    {
+        "ad": "Vaka 7 - Kardiyoloji ve Diyabet Capraz Etkilesimi",
+        "epikriz": (
+            "55 yasinda erkek hasta, hipertansiyon ve tip 2 diyabet tanisiyla "
+            "Beloc ZOK 50 mg ve Atamet 1000 mg kullanmakta. Kan sekeri regulasyonu "
+            "zaman zaman bozuluyor."
+        ),
+        "soru": "Beloc ZOK (metoprolol) kullanimi hastanin hipoglisemi durumunu ve belirtilerini nasil etkiler?",
+        "beklenen": "Beta blokerlerin hipoglisemi semptomlarini (tasikardi vb.) maskeleyebilecegi uyarisi.",
+    },
+    {
+        "ad": "Vaka 8 - Kardiyoloji ve Agri Kesici (NSAII) Cakismasi",
+        "epikriz": (
+            "62 yasinda kadin hasta, esansiyel hipertansiyon nedeniyle Delix Plus "
+            "(5mg/25mg) kullanmaktadir. Siddetli osteoartrit agrilari nedeniyle "
+            "gunde 2 kez Ibuprofen 600 mg (Artril) recete edilmesi planlaniyor."
+        ),
+        "soru": "Bu iki ilacin (Delix Plus ve Ibuprofen) birlikte kullanimi bobrekler ve potasyum seviyesi acisindan guvenli mi?",
+        "beklenen": "NSAII + ADE Inhibitoru/Diuretik cakismasi -> Akut bobrek yetmezligi ve potasyum artisi riski uyarisi.",
+    },
+    {
+        "ad": "Vaka 9 - Ilac-Durum Kontrendikasyonu (Gebelik)",
+        "epikriz": (
+            "28 yasinda kadin hasta, 10 haftalik gebe. Gecmiste gecirilmis "
+            "derin ven trombozu oykusu nedeniyle Warfmadin 5mg baslanmasi dusunuluyor."
+        ),
+        "soru": "Gebe hastaya Warfarin (Warfmadin) verilmesi uygun mudur?",
+        "beklenen": "Gebelik durumu + Warfarin -> Teratojenik etki/fetus zarari nedeniyle kesin kontrendikasyon uyarisi.",
+    },
+    {
+        "ad": "Vaka 10 - Coklu Kardiyoloji Ilaci Kullanimi",
+        "epikriz": (
+            "65 yasinda erkek hasta, kronik stabil anjina ve hipertansiyon "
+            "tanilariyla Norvasc (Amlodipin) 5 mg kullanmaktadir. Hastanin "
+            "tedavisine Beloc ZOK (Metoprolol) eklenmesi planlanmaktadir."
+        ),
+        "soru": "Norvasc ve Beloc ZOK birlikte kullanildiginda hemodinamik acikdan neye dikkat edilmelidir?",
+        "beklenen": "Kalsiyum kanal blokoru + Beta bloker cakismasi -> Kalp hizi ve tansiyon uzerinde aditif etki, bradikardi/hipotansiyon riski.",
+    }
 ]
 
 
