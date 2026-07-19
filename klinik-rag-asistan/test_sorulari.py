@@ -74,6 +74,42 @@ TEST_SORULARI = [
     "Glimepirid gebelikte kullanilabilir mi?",
     # 9. Doz ayarlamasi + bobrek fonksiyonu kombinasyonu
     "Bobrek yetmezligi olan bir hastada ibuprofen (Artril) dozunun ayarlanmasi gerekir mi?",
+    ''' 10. [ROUTER TETIKLEME] 3+ ilacli soru - farkli 3 KUB dokumanina bolunmus bilginin tek cevapta birlestirilmesi gerekiyor. 
+    NOT: n_results=5 sabit oldugu icin bu test, 3 ilacin da dengeli sekilde retrieval'a 
+    girip girmedigini (yoksa bir ilacin gozden kacip kacmadigini) ortaya
+    cikarir - basarisiz olursa n_results/router mimarisini gozden gecirin.
+    '''
+    "Warfarin, ibuprofen ve metformin ayni hastada birlikte kullaniliyor. "
+    "Bu uc ilac arasinda dikkat edilmesi gereken etkilesimler nelerdir?",
+ 
+    # 11. [ROUTER TETIKLEME] Farkli 3+ ilac kombinasyonu (Vaka 9'a benzer ama baglamsiz/genel soru formatinda - Seviye 1'de ayrica test edilmeli)
+    "Glimepirid, metformin ve varfarin ayni anda kullanildiginda "
+    "olusabilecek riskler nelerdir?",
+ 
+    # 12. [YANLIS YAZIM] "varfarn" typo'su - embedding'in kelime hatasina ragmen dogru ilaca (warfarin) yonlenip yonlenmedigini test eder.
+    "Varfarn kullanan bir hastaya ibuprofen verilirse ne olur?",
+ 
+    # 13. [YANLIS YAZIM] Iki ayri typo ayni soruda ("metformn", "gilmepirid")
+    "Metformn ile gilmepirid birlikte kullanilabilir mi?",
+ 
+    # 14. [YANLIS YAZIM] Marka adinda typo ("Artil" -> Artril, "Amaril" -> Amaryl)
+    "Artil (ibuprofen) ile Amaril birlikte alinirsa bir sorun olur mu?",
+ 
+    # 15. [KISA/BELIRSIZ] Hicbir ilac veya hasta bilgisi icermiyor - sistem SISTEM_PROMPTU kuralina gore netlestirme istemeli, tahmin yurutmemeli.
+    "Etkilesir mi?",
+ 
+    # 16. [KISA/BELIRSIZ] "Bu ilaclar" - onceki konusma baglami olmadan hangi ilaclarin kastedildigi belirsiz.
+    "Bu ilaclar birlikte kullanilir mi?",
+ 
+    # 17. [DOZAJ + ETKILESIM BIRLESIK] Tek soruda iki farkli bilgi turu
+    #     isteniyor - cevabin hem dozu hem de etkilesim riskini net ayirmasi
+    #     gerekir (BULGULAR bolumunde karistirmadan).
+    "Ibuprofenin (Artril) gunluk maksimum dozu nedir ve varfarin ile "
+    "birlikte kullanilirsa kanama riski artar mi?",
+ 
+    # 18. [DOZAJ + ETKILESIM BIRLESIK] Farkli ilac cifti ile ayni format
+    "Metforminin (Atamet) onerilen baslangic dozu nedir ve glimepirid ile "
+    "ayni anda kullanilirsa hipoglisemi riski nasil degisir?",
 ]
 
 
@@ -216,7 +252,8 @@ VAKA_TESTLERI = [
         "soru": "Norvasc ve Beloc ZOK birlikte kullanildiginda hemodinamik acikdan neye dikkat edilmelidir?",
         "beklenen": "Kalsiyum kanal blokoru + Beta bloker cakismasi -> Kalp hizi ve tansiyon uzerinde aditif etki, bradikardi/hipotansiyon riski.",
     }
-        "ad": "Vaka 7 - Gebelikte Kontrendike Ilac",
+    {
+        "ad": "Vaka 11- Gebelikte Kontrendike Ilac",
         "epikriz": (
             "28 yasinda gebe hasta (24. gebelik haftasi), tip 2 diyabet "
             "tanisiyla glimepirid 2 mg/gun baslanmasi planlaniyor. Baska "
@@ -229,7 +266,7 @@ VAKA_TESTLERI = [
         ),
     },
     {
-        "ad": "Vaka 8 - Yasli Hasta + Bobrek Fonksiyonu + NSAID",
+        "ad": "Vaka 12 - Yasli Hasta + Bobrek Fonksiyonu + NSAID",
         "epikriz": (
             "81 yasinda erkek hasta, kronik bobrek hastaligi evre 3 "
             "(eGFR 38) mevcut. Osteoartrit agrisi nedeniyle ibuprofen "
@@ -242,7 +279,7 @@ VAKA_TESTLERI = [
         ),
     },
     {
-        "ad": "Vaka 9 - Uclu Ilac Kombinasyonu (halusinasyon testi)",
+        "ad": "Vaka 13 - Uclu Ilac Kombinasyonu (halusinasyon testi)",
         "epikriz": (
             "60 yasinda kadin hasta; tip 2 diyabet nedeniyle glimepirid ve "
             "metformin (Atamet) kullanmakta. Yeni gelisen atriyal "
