@@ -237,6 +237,11 @@ def _ilac_dosya_haritasi():
         "Ibuprofen (Artril 600mg)": "Artril 600mg KÜB",
         "Glimepirid (Amaryl 2mg)": "Amaryl 2mg KÜB",
         "Metformin (Atamet 1000mg)": "Atamet 1000mg KÜB",
+        "DELIX PLUS (5mg/25mg)":"DELIX PLUS 5mg/25mg KÜB",
+        "PLAVIX (75mg)":"PLAVIX 75mg KÜB",
+        "LIPITOR (20mg)":"LIPITOR 20mg KÜB",
+        "NORVASC (5mg)":"NORVASC 5mg KÜB",
+        "BELOC ZOK (50mg)":"BELOC ZOK 50mg KÜB"
     }
 
 def _cache_anahtari(soru):

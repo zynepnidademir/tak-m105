@@ -5,24 +5,30 @@ import json
 KAYNAK_KLASOR = "data/ilaclar_metin"
 HEDEF_DOSYA = "data/chunks.json"
 
-CHUNK_SIZE = 1000
-OVERLAP = 200
-
+CHUNK_SIZE = 1200
+OVERLAP = 250
 ILAC_ADLARI = {
     "atamet": "Metformin (Atamet 1000mg)",
     "glimepirid": "Glimepirid (Amaryl 2mg)",
     "ibuprofen2": "Ibuprofen (Artril 600mg)",
     "warfmadin5mgtabletpdf": "Varfarin (Warfmadin 5mg)",
+    "delix": "DELIX PLUS (5mg/25mg)",
+    "plavix": "PLAVIX (75mg)",
+    "lipitor": "LIPITOR (20mg)",
+    "norvasc": "NORVASC (5mg)",
+    "Beloc": "BELOC ZOK (50mg)"
 }
 
-
 def ilac_adi_bul(dosya_adi):
+    # Dosya adını küçük harfe çeviriyoruz
     anahtar = dosya_adi.lower().replace(".txt", "")
+    
     for parca, ad in ILAC_ADLARI.items():
-        if parca in anahtar:
+        # Sözlükteki anahtarı (parca) da küçük harfe çevirerek arıyoruz
+        if parca.lower() in anahtar: 
             return ad
+            
     return dosya_adi.replace(".txt", "")
-
 
 def sayfalara_ayir(icerik):
     parcalar = re.split(r"\[SAYFA (\d+)\]", icerik)
