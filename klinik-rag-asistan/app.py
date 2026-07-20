@@ -4,6 +4,7 @@ import streamlit.components.v1 as components
 import sys
 import time
 import json
+import re
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from rag_sorgula import analiz_uret
 import base64
@@ -188,23 +189,64 @@ st.markdown("""
         color: #CBD5E1;
     }
 
-    
-    /* Print Styles for clean report printing */
+
+    /* ==============================================================
+       YAZDIRMA (PRINT) CSS KURALLARI
+       ============================================================== */
     @media print {
-        header[data-testid="stHeader"], 
-        section[data-testid="stSidebar"], 
-        div[data-testid="stForm"], 
-        .stButton, 
-        .dashboard-welcome,
-        .quick-queries-title {
+        /* 1. JS Klonlama Yöntemi (Butona Tıklanınca) */
+        body.print-mode-clone > * {
             display: none !important;
         }
+        
+        body.print-mode-clone #print-clone-element {
+            display: block !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            padding: 20px !important;
+            background: white !important;
+            /* Araç çubuğu olmadığından alt kenarlıkları onar */
+            border-bottom: 1px solid #CBD5E1 !important;
+            border-bottom-left-radius: 12px !important;
+            border-bottom-right-radius: 12px !important;
+            box-shadow: none !important;
+        }
+
+        /* 2. Standart Tarayıcı Yazdırması (Ctrl+P) İçin Güvenlik Ağı */
+        [data-testid="stSidebar"], 
+        header[data-testid="stHeader"], 
+        .stSidebar,
+        div[data-testid="collapsedControl"],
+        [data-testid="stForm"], 
+        form, 
+        .stButton, 
+        iframe, 
+        .dashboard-welcome, 
+        .quick-queries-title,
+        .message-user, 
+        .message-user-header, 
+        .message-user-text {
+            display: none !important;
+        }
+        
+        /* Sağ paneli gizle */
+        div[data-testid="stColumn"]:nth-child(2) {
+            display: none !important;
+        }
+        
+        /* Sol paneli tam genişlik yap */
+        div[data-testid="stColumn"]:nth-child(1) {
+            width: 100% !important;
+            max-width: 100% !important;
+            flex: 1 1 100% !important;
+        }
+        
         .block-container {
             max-width: 100% !important;
             padding: 0 !important;
         }
-        body { background: white !important; }
-        .medical-report { box-shadow: none !important; border: 1px solid #CBD5E1 !important; }
     }
     
     /* Header styling */
@@ -633,30 +675,28 @@ def handle_query(query_text):
     
     start_time = time.time()
     
+    # Dinamik "Router" animasyon metinleri için sorgu kontrolü
+    query_lower = query_text.lower()
+    # Birden fazla ilaç olabileceğini işaret eden virgül, "ve", "ile" veya uzun kelime sayısına göre kontrol
+    is_complex = "," in query_lower or " ve " in query_lower or " ile " in query_lower or len(query_lower.split()) > 3
+    
+    seq_2_text = "Birden fazla ilaç tespit edildi, detaylı analiz yapıyor..." if is_complex else "İlaç etkileşimleri kontrol ediliyor..."
+    seq_3_text = "Router devreye girdi, ilaç etkileşim haritası çıkarılıyor..." if is_complex else "Yapay zeka raporu oluşturuluyor..."
+    
     loading_placeholder = st.empty()
-    loading_html = """
+    loading_html = f"""
     <style>
-    @keyframes spin-medical {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    @keyframes fade-seq-1 {
-        0%, 25% { opacity: 1; }
-        33%, 91% { opacity: 0; }
-        100% { opacity: 1; }
-    }
-    @keyframes fade-seq-2 {
-        0%, 25% { opacity: 0; }
-        33%, 58% { opacity: 1; }
-        66%, 100% { opacity: 0; }
-    }
-    @keyframes fade-seq-3 {
-        0%, 58% { opacity: 0; }
-        66%, 91% { opacity: 1; }
-        100% { opacity: 0; }
-    }
+    @keyframes spin-medical {{
+        0% {{ transform: rotate(0deg); }}
+        100% {{ transform: rotate(360deg); }}
+    }}
+    @keyframes fade-seq {{
+        0%, 100% {{ opacity: 0; }}
+        5%, 28% {{ opacity: 1; }}
+        33% {{ opacity: 0; }}
+    }}
 
-    .loading-container {
+    .loading-container {{
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -667,50 +707,59 @@ def handle_query(query_text):
         border: 1px solid #E2E8F0;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         margin: 1.5rem 0;
-    }
-    .medical-spinner {
-        width: 45px;
-        height: 45px;
+    }}
+    .medical-spinner {{
+        width: 50px;
+        height: 50px;
         border: 4px solid #F1F5F9;
         border-top: 4px solid #0056B3;
         border-radius: 50%;
         animation: spin-medical 1s linear infinite;
-        margin-bottom: 1.5rem;
-    }
-    .loading-text-wrapper {
+        margin-bottom: 1.5rem; /* Halkanın altına güvenli bir boşluk bırakır */
+        flex-shrink: 0;
+    }}
+    .loading-text-wrapper {{
         position: relative;
-        height: 24px;
+        height: 40px; /* Metinlerin taşmaması için dikey alan genişletildi */
         width: 100%;
         display: flex;
         justify-content: center;
         align-items: center;
-    }
-    .loading-text-wrapper span {
+    }}
+    .loading-text-wrapper span {{
         position: absolute;
+        top: 0; /* Üst üste binmeyi önlemek için tepe noktası sabitlendi */
         font-weight: 600;
         color: #334155;
         font-size: 1rem;
         text-align: center;
+        white-space: nowrap;
         opacity: 0;
-        transition: opacity 0.3s ease;
-    }
-    .seq-1 { animation: fade-seq-1 6s infinite; }
-    .seq-2 { animation: fade-seq-2 6s infinite; }
-    .seq-3 { animation: fade-seq-3 6s infinite; }
+    }}
+    
+    /* Animasyon sıralaması tek bir döngüde daha stabil hale getirildi */
+    .seq-1 {{ animation: fade-seq 9s infinite; animation-delay: 0s; }}
+    .seq-2 {{ animation: fade-seq 9s infinite; animation-delay: 3s; }}
+    .seq-3 {{ animation: fade-seq 9s infinite; animation-delay: 6s; }}
     </style>
     <div class="loading-container">
         <div class="medical-spinner"></div>
         <div class="loading-text-wrapper">
             <span class="seq-1">Klinik belgeler taranıyor...</span>
-            <span class="seq-2">İlaç etkileşimleri kontrol ediliyor...</span>
-            <span class="seq-3">Yapay zeka raporu oluşturuluyor...</span>
+            <span class="seq-2">{seq_2_text}</span>
+            <span class="seq-3">{seq_3_text}</span>
         </div>
     </div>
     """
     loading_placeholder.markdown(loading_html, unsafe_allow_html=True)
     
-    result = analiz_uret(query_text)
-    
+    try:
+        result = analiz_uret(query_text)
+    except Exception as e:
+        loading_placeholder.empty()
+        st.error("⚠️ Klinik Analiz Hatası: Sorgulanan ilaçlar veya etkileşimler hakkında sistemde yeterli tıbbi veri bulunamadı veya teknik bir sorun oluştu. Hastanın güvenliği için lütfen girdilerinizi kontrol edip tekrar deneyiniz veya resmi KÜB/KT kılavuzlarına başvurunuz.")
+        return
+        
     loading_placeholder.empty()
         
     end_time = time.time()
@@ -736,16 +785,28 @@ def handle_query(query_text):
 # Custom Streamlit Modal Dialog for PDF Simulator
 @st.dialog("Kılavuz Belgesi Görüntüleyici", width="large")
 def show_pdf_viewer(doc_name, chapter_page, snippet):
-    st.markdown(textwrap.dedent(f"""
-    <div style="background-color: #0F172A; padding: 1rem; border-radius: 8px 8px 0 0; color: white; display: flex; justify-content: space-between; align-items: center;">
+    import html
+
+    # 1. Öncellikle gelen metindeki &lt;, &gt;, &quot; gibi ifadeleri çözüyoruz
+    decoded_snippet = html.unescape(snippet)
+    
+    # 2. Metnin içine bulaşmış olan her türlü ham <... > HTML etiketini temizliyoruz
+    clean_snippet = re.sub(r'<[^>]+>', '', decoded_snippet)
+    
+    # 3. Kalan ardışık boşlukları temizleyip tek satır düzgün metne çeviriyoruz
+    clean_snippet = " ".join(clean_snippet.split())
+
+    # 4. Şablonu bozmamak ve tarayıcının doğru render etmesi için tek bir HTML string'i oluşturuyoruz
+    modal_html = f"""
+    <div style="background-color: #0F172A; padding: 1rem; border-radius: 8px 8px 0 0; color: white; display: flex; justify-content: space-between; align-items: center; font-family: 'Inter', sans-serif;">
         <div style="font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; gap: 0.5rem;">
-            <i class="fa-solid fa-book-medical"></i> {doc_name}
+            {doc_name}
         </div>
         <div style="background-color: #334155; padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">
             {chapter_page}
         </div>
     </div>
-    <div style="background-color: white; border: 1px solid #E2E8F0; border-top: none; padding: 2rem; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+    <div style="background-color: white; border: 1px solid #E2E8F0; border-top: none; padding: 2rem; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); font-family: 'Inter', sans-serif; color: #1E293B;">
         <div style="text-align: center; border-bottom: 2px double #E2E8F0; padding-bottom: 1rem; margin-bottom: 1.5rem;">
             <h4 style="color: #004080; margin: 0; font-weight: 700; font-size: 1.1rem; text-transform: uppercase;">T.C. SAĞLIK BAKANLIĞI</h4>
             <small style="color: #64748B; font-weight: 600; font-size: 0.75rem; letter-spacing: 1px;">KLİNİK REHBER & TEDAVİ PROTOKOLLERİ ARŞİVİ</small>
@@ -758,10 +819,10 @@ def show_pdf_viewer(doc_name, chapter_page, snippet):
         
         <div style="background-color: #FFFBEB; border-left: 4px solid #F59E0B; padding: 1.25rem; margin-bottom: 1.5rem; border-radius: 4px;">
             <div style="font-size: 0.75rem; font-weight: 700; color: #B45309; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.5px;">
-                <i class="fa-solid fa-triangle-exclamation"></i> ALINTILANAN RESMİ KLİNİK PARAGRAF:
+                ALINTILANAN RESMİ KLİNİK PARAGRAF:
             </div>
             <p style="font-size: 0.95rem; color: #78350F; line-height: 1.6; font-style: italic; margin: 0;">
-                "... {snippet} ..."
+                "... {clean_snippet} ..."
             </p>
         </div>
         
@@ -774,16 +835,57 @@ def show_pdf_viewer(doc_name, chapter_page, snippet):
             <span>Sayfa Arşivi Resmi Çıktısı</span>
         </div>
     </div>
-    """), unsafe_allow_html=True)
+    """
+    
+    # HTML kodunu doğrudan ve güvenli bir şekilde ekrana basıyoruz
+    st.html(modal_html)
+    
     if st.button("Kapat", use_container_width=True):
         st.rerun()
 
 # ----------------- MULTIPAGE FUNCTIONS -----------------
 
 def page_giris():
+    import glob
+    import datetime
+    
+    # Sistem Durumu (KÜB doküman sayısı ve son güncelleme tarihi)
+    doc_count = 0
+    last_update_str = "Bilinmiyor"
+    
+    try:
+        # app.py'nin bulunduğu dizini referans alarak data/ilaclar klasörünü bul
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        data_dir = os.path.join(base_dir, "data", "ilaclar")
+        
+        pdf_files = glob.glob(os.path.join(data_dir, "*.pdf"))
+        txt_files = glob.glob(os.path.join(data_dir, "*.txt"))
+        all_docs = pdf_files + txt_files
+        
+        doc_count = len(all_docs)
+        if doc_count > 0:
+            latest_time = max(os.path.getmtime(f) for f in all_docs)
+            last_update_str = datetime.datetime.fromtimestamp(latest_time).strftime('%d.%m.%Y %H:%M')
+        else:
+            last_update_str = datetime.datetime.now().strftime('%d.%m.%Y')
+    except Exception:
+        doc_count = 0
+        last_update_str = datetime.datetime.now().strftime('%d.%m.%Y')
+
     if logo_base64:
         st.markdown(f'<div style="text-align: center;"><img src="data:image/png;base64,{logo_base64}" width="150" style="border-radius: 12px; margin-bottom: 2rem;"></div>', unsafe_allow_html=True)
     st.markdown("<h1 style='text-align: center; color: #004080;'>Klinik Karar Destek Sistemine Hoş Geldiniz</h1>", unsafe_allow_html=True)
+    
+    # Sistem Durumu Rozeti
+    status_html = f"""
+    <div style="text-align: center; margin-bottom: 1.5rem;">
+        <span style="background-color: #E0F2FE; color: #0284C7; padding: 0.4rem 1rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; border: 1px solid #BAE6FD; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+            <i class="fa-solid fa-database"></i> Sistem Durumu: {doc_count} KÜB dokümanı yüklü &nbsp;|&nbsp; Son Güncelleme: {last_update_str}
+        </span>
+    </div>
+    """
+    st.markdown(status_html, unsafe_allow_html=True)
+    
     st.markdown("<p style='text-align: center; color: #64748B; font-size: 1.1rem; max-width: 700px; margin: 0 auto 2rem auto;'>Bu asistan, sağlık profesyonellerinin güncel tıbbi kılavuzlar ve ilaç etkileşim veritabanları ışığında kanıta dayalı ve hızlı klinik kararlar almasına yardımcı olmak için RAG (Retrieval-Augmented Generation) teknolojisi ile geliştirilmiştir.</p>", unsafe_allow_html=True)
     col1, col2 = st.columns(2, gap="large")
     with col1:
@@ -886,7 +988,7 @@ def page_sorgulama():
                 st.markdown('<div class="section-title"><i class="fa-solid fa-magnifying-glass"></i> Klinik Sorgu Geçmişi ve Sonuçlar</div>', unsafe_allow_html=True)
             
                 # Render messages in historical order
-                for msg in st.session_state.chat_history:
+                for idx, msg in enumerate(st.session_state.chat_history):
                     if msg["role"] == "user":
                         st.markdown(f"""
                         <div class="chat-container">
@@ -899,12 +1001,21 @@ def page_sorgulama():
                     else:
                         # Assistant Medical Report response
                         rep = msg["content"]
+                        unique_report_id = f"print_report_id_{idx}_{int(time.time() * 1000)}"
                     
                         # Dynamic risk class based on text content
                         summary_text = " ".join(rep.get("summary", [])) if isinstance(rep.get("summary"), list) else str(rep.get("summary", ""))
                         rep_str = f"{summary_text} {rep.get('mechanism', '')} {rep.get('recommendation', '')}".lower()
-                    
-                        if any(kw in rep_str for kw in ["kontrendike", "kontrendikasyon", "ölüm", "yüksek risk", "tehlikeli"]):
+
+                        # Klinik olarak verinin eksik/yetersiz olması durumunu en tepede yakalıyoruz
+                        if "yeterli klinik veri bulunamadı" in rep_str:
+                            risk_class = "risk-moderate"  # Arayüzde dikkat çekmesi için sarı/turuncu uyarı rengini kullanıyoruz
+                            risk_label = '<i class="fa-solid fa-triangle-exclamation"></i> VERİ YETERSİZ / BELİRSİZ'
+                            plain_risk_label = "VERİ YETERSİZ / BELİRSİZ"
+                            
+                            # Hekim önerisini kuru bir metin yerine daha detaylı ve uyarıcı bir dille eziyoruz
+                            rep['recommendation'] = "Sistem veritabanında bu ilaç kombinasyonuna dair yeterli tıbbi kanıt rehberi bulunamamıştır. Hastanın güvenliği adına güncel ulusal KÜB/KT kılavuzlarının manuel olarak incelenmesi, hastanın böbrek/karaciğer fonksiyonlarının kontrol edilmesi ve klinik kararın hekim inisiyatifinde verilmesi önerilir."
+                        elif any(kw in rep_str for kw in ["kontrendike", "kontrendikasyon", "ölüm", "yüksek risk", "tehlikeli"]):
                             risk_class = "risk-high"
                             risk_label = '<i class="fa-solid fa-triangle-exclamation"></i> YÜKSEK RİSK / KONTRENDİKASYON'
                             plain_risk_label = "YÜKSEK RİSK / KONTRENDİKASYON"
@@ -923,7 +1034,7 @@ def page_sorgulama():
                         # Render the report card (without bottom padding to seamlessly attach toolbar)
                         st.markdown(f"""
                         <div class="chat-container" style="margin-bottom: 0;">
-                            <div class="medical-report" style="border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none; box-shadow: none;">
+                            <div id="{unique_report_id}" class="medical-report" style="border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none; box-shadow: none;">
                                 <div class="medical-report-header">
                                     <span class="medical-report-title"><i class="fa-solid fa-notes-medical"></i> {rep['title']}</span>
                                     <span class="risk-badge {risk_class}">{risk_label}</span>
@@ -948,16 +1059,16 @@ def page_sorgulama():
                         </div>
                         """, unsafe_allow_html=True)
                     
-                        # Prepare plain text for clipboard
-                        copy_text = f"KLİNİK ANALİZ RAPORU\\n"
-                        copy_text += f"──────────────────────────────\\n"
-                        copy_text += f"Durum: {plain_risk_label}\\n\\n"
-                        copy_text += f"Klinik Bulgular ve Özet:\\n"
+                        # Prepare plain text for clipboard (HATA 1 ÇÖZÜMÜ: Çift ters çizgi yerine tek kaçış dizini eklendi)
+                        copy_text = "KLİNİK ANALİZ RAPORU\n"
+                        copy_text += "──────────────────────────────\n"
+                        copy_text += f"Durum: {plain_risk_label}\n\n"
+                        copy_text += "Klinik Bulgular ve Özet:\n"
                         for item in rep.get("summary", []):
-                            copy_text += f"• {item}\\n"
-                        copy_text += f"\\nEtkileşim Mekanizması:\\n{rep.get('mechanism', '')}\\n\\n"
-                        copy_text += f"Hekim Klinik Karar Önerisi:\\n{rep.get('recommendation', '')}\\n"
-                        copy_text += f"──────────────────────────────"
+                            copy_text += f"• {item}\n"
+                        copy_text += f"\nEtkileşim Mekanizması:\n{rep.get('mechanism', '')}\n\n"
+                        copy_text += f"Hekim Klinik Karar Önerisi:\n{rep.get('recommendation', '')}\n"
+                        copy_text += "──────────────────────────────"
                     
                         safe_copy_text = json.dumps(copy_text)
                         time_text = f"Yanıt süresi: {msg['elapsed_time']:.2f} saniye" if "elapsed_time" in msg else ""
@@ -1049,7 +1160,34 @@ def page_sorgulama():
                                 }}
                                 function printReport() {{
                                     try {{
-                                        window.parent.print();
+                                        const parentDoc = window.parent.document;
+                                        const reportElement = parentDoc.getElementById('{unique_report_id}');
+                                        
+                                        if (reportElement) {{
+                                            // Varsa eski klonu temizle
+                                            const oldClone = parentDoc.getElementById('print-clone-element');
+                                            if (oldClone) oldClone.remove();
+                                            
+                                            // İlgili raporun klonunu al ve body'ye ekle
+                                            const clone = reportElement.cloneNode(true);
+                                            clone.id = 'print-clone-element';
+                                            parentDoc.body.appendChild(clone);
+                                            
+                                            // Klonlama CSS'ini aktif et (diğer her şeyi gizler)
+                                            parentDoc.body.classList.add('print-mode-clone');
+                                            
+                                            window.parent.print();
+                                            
+                                            // Yazdırma işlemi bittikten hemen sonra temizlik yap
+                                            setTimeout(() => {{
+                                                parentDoc.body.classList.remove('print-mode-clone');
+                                                const existingClone = parentDoc.getElementById('print-clone-element');
+                                                if(existingClone) existingClone.remove();
+                                            }}, 1000);
+                                        }} else {{
+                                            // Fallback
+                                            window.parent.print();
+                                        }}
                                     }} catch (err) {{
                                         window.print();
                                     }}
